@@ -7,7 +7,6 @@ package io.ktor.client.engine.cio
 import io.ktor.client.engine.*
 import io.ktor.client.features.*
 import io.ktor.client.request.*
-import io.ktor.client.request.port
 import io.ktor.client.utils.*
 import io.ktor.http.*
 import io.ktor.network.selector.*
@@ -21,9 +20,6 @@ import kotlin.coroutines.*
 internal class CIOEngine(
     override val config: CIOEngineConfig
 ) : HttpClientEngineBase("ktor-cio") {
-    init {
-        preventFreeze()
-    }
 
     override val dispatcher by lazy {
         Dispatchers.clientDispatcher(config.threadsCount, "ktor-cio-dispatcher")
@@ -46,12 +42,15 @@ internal class CIOEngine(
         requestsJob = SilentSupervisor(parent)
         coroutineContext = super.coroutineContext + requestsJob
 
+        val requestJob = requestsJob[Job]!!
+        val selector = selectorManager
+
         GlobalScope.launch(super.coroutineContext, start = CoroutineStart.ATOMIC) {
             try {
-                requestsJob[Job]!!.join()
+                requestJob.join()
             } finally {
-                selectorManager.close()
-                selectorManager.coroutineContext[Job]!!.join()
+                selector.close()
+                selector.coroutineContext[Job]!!.join()
             }
         }
     }

@@ -13,4 +13,4 @@ actual val NetworkAddress.port: Int
 actual typealias UnresolvedAddressException = java.nio.channels.UnresolvedAddressException
 
 actual val NetworkAddress.isResolved: Boolean
-    get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+    get() = true

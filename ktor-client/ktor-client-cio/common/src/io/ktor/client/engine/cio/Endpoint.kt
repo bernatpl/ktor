@@ -27,10 +27,6 @@ internal class Endpoint(
     override val coroutineContext: CoroutineContext,
     private val onDone: () -> Unit
 ) : CoroutineScope, Closeable {
-    init {
-        preventFreeze()
-    }
-
     private val address = NetworkAddress(host, port)
 
     private val connections: AtomicInt = atomic(0)
@@ -65,6 +61,10 @@ internal class Endpoint(
 //        }
 //    }
 
+    init {
+        preventFreeze()
+    }
+
     suspend fun execute(
         request: HttpRequestData,
         callContext: CoroutineContext
@@ -98,23 +98,24 @@ internal class Endpoint(
     ): Deferred<HttpResponseData> = async(callContext + CoroutineName("DedicatedRequest")) {
         try {
             val connection = connect(request)
-            val input = this@Endpoint.mapEngineExceptions(connection.openReadChannel(), request)
-            val originOutput = this@Endpoint.mapEngineExceptions(connection.openWriteChannel(), request)
-            val output = originOutput.handleHalfClosed(
-                callContext, config.endpoint.allowHalfClose
-            )
+            val input = connection.openReadChannel() // this@Endpoint.mapEngineExceptions(connection.openReadChannel(), request)
+            val originOutput = connection.openWriteChannel() // this@Endpoint.mapEngineExceptions(connection.openWriteChannel(), request)
+            val output = originOutput
+//            originOutput.handleHalfClosed(
+//                callContext, config.endpoint.allowHalfClose
+//            )
 
             val requestTime = GMTDate()
 
-            callContext[Job]!!.invokeOnCompletion { cause ->
-                try {
-                    input.cancel(cause)
-                    originOutput.close(cause)
-                    connection.close()
-                    releaseConnection()
-                } catch (_: Throwable) {
-                }
-            }
+//            callContext[Job]!!.invokeOnCompletion { cause ->
+//                try {
+//                    input.cancel(cause)
+//                    originOutput.close(cause)
+//                    connection.close()
+//                    releaseConnection()
+//                } catch (_: Throwable) {
+//                }
+//            }
 
             val timeout = config.requestTimeout
             val writeRequestAndReadResponse: suspend CoroutineScope.() -> HttpResponseData = {
@@ -208,7 +209,7 @@ internal class Endpoint(
     /**
      * Defines exact type of exception based on [retryAttempts] and [timeoutFails].
      */
-    private fun getTimeoutException(retryAttempts: Int, timeoutFails: Int, request: HttpRequestData) =
+    private fun getTimeoutException(retryAttempts: Int, timeoutFails: Int, request: HttpRequestData): Exception =
         when (timeoutFails) {
             retryAttempts -> ConnectTimeoutException(request)
             else -> FailToConnectException()

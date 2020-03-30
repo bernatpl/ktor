@@ -92,9 +92,11 @@ internal suspend fun readResponse(
     output: ByteWriteChannel,
     callContext: CoroutineContext
 ): HttpResponseData {
+    println("Start parsing")
     val rawResponse = parseResponse(input)
         ?: throw EOFException("Failed to parse HTTP response: unexpected EOF")
 
+    println("Done parsing")
     val status = HttpStatusCode(rawResponse.status, rawResponse.statusText.toString())
     val contentLength = rawResponse.headers[HttpHeaders.ContentLength]?.toString()?.toLong() ?: -1L
     val transferEncoding = rawResponse.headers[HttpHeaders.TransferEncoding]

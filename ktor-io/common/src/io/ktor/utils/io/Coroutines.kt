@@ -2,6 +2,7 @@ package io.ktor.utils.io
 
 import kotlinx.coroutines.*
 import kotlin.coroutines.*
+import io.ktor.utils.*
 
 /**
  * A coroutine job that is reading from a byte channel
@@ -116,9 +117,19 @@ private fun <S : CoroutineScope> CoroutineScope.launchChannel(
     block: suspend S.() -> Unit
 ): ChannelJob {
 
+    val origin = Exception()
     val job = launch(context) {
-        if (attachJob) {
-            channel.attachJob(coroutineContext[Job]!!)
+        try {
+            if (attachJob) {
+                channel.attachJob(coroutineContext[Job]!!)
+            }
+        } catch (exception: Throwable) {
+            println("Fail: $exception")
+            exception.printStack()
+            println("Origin: $origin")
+            origin.printStack()
+
+            throw exception
         }
         try {
             @Suppress("UNCHECKED_CAST")
